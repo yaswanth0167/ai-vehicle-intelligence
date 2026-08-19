@@ -115,25 +115,50 @@ def get_all_history():
     conn.close()
     return history
 
+FALLBACK_BRANDS = ["Maruti", "Hyundai", "Honda", "Toyota", "Ford", "Mahindra", "Tata", "Kia", "BMW", "Audi"]
+
+FALLBACK_MODELS = {
+    "Maruti": ["Swift", "Baleno", "Alto", "Dzire", "WagonR"],
+    "Hyundai": ["i20", "Creta", "Verna", "Grand i10", "Santro"],
+    "Honda": ["City", "Civic", "Amaze", "Jazz", "WR-V"],
+    "Toyota": ["Innova", "Fortuner", "Corolla", "Camry", "Yaris"],
+    "Ford": ["EcoSport", "Figo", "Endeavour", "Aspire"],
+    "Mahindra": ["Thar", "Scorpio", "XUV500", "Bolero"],
+    "Tata": ["Nexon", "Harrier", "Safari", "Tiago"],
+    "Kia": ["Seltos", "Sonet", "Carnival"],
+    "BMW": ["3 Series", "5 Series", "X5", "X3"],
+    "Audi": ["A4", "A6", "Q5", "Q3"]
+}
+
 def get_car_brands():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT brand FROM used_car_records ORDER BY brand")
-    brands = [r[0] for r in cursor.fetchall()]
-    cursor.close()
-    conn.close()
-    return brands
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT brand FROM used_car_records ORDER BY brand")
+        brands = [r[0] for r in cursor.fetchall() if r[0]]
+        cursor.close()
+        conn.close()
+        if brands:
+            return brands
+    except Exception as e:
+        print(f"Error fetching brands, using fallback: {e}")
+    return FALLBACK_BRANDS
 
 def get_car_models(brand):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT DISTINCT model FROM used_car_records WHERE brand = %s ORDER BY model", (brand,)
-    )
-    models = [r[0] for r in cursor.fetchall()]
-    cursor.close()
-    conn.close()
-    return models
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT DISTINCT model FROM used_car_records WHERE brand = %s ORDER BY model", (brand,)
+        )
+        models = [r[0] for r in cursor.fetchall() if r[0]]
+        cursor.close()
+        conn.close()
+        if models:
+            return models
+    except Exception as e:
+        print(f"Error fetching models for {brand}, using fallback: {e}")
+    return FALLBACK_MODELS.get(brand, ["Standard Sedan", "Standard SUV"])
 
 def get_dashboard_stats(user_id=None):
     conn = get_db_connection()
