@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-7">
+        <div class="prediction-form-card">
+            <h5 class="fw-bold mb-4"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i> Vehicle Diagnostics Scan</h5>
+            
+            <form id="diagnosisForm" action="{{ url_for('predict_diagnosis') }}" method="POST">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="vehicle_brand" class="form-label">Brand</label>
+                        <select class="form-select" id="vehicle_brand" name="vehicle_brand" required>
+                            <option value="">Select Brand</option>
+                            {% for b in brands %}
+                            <option value="{{ b }}">{{ b }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="vehicle_model" class="form-label">Model</label>
+                        <select class="form-select" id="vehicle_model" name="vehicle_model" required>
+                            <option value="">Select Model (Choose Brand First)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="manufacturing_year" class="form-label">Mfg. Year</label>
+                        <input type="number" class="form-control" id="manufacturing_year" name="manufacturing_year" min="1990" max="2026" value="2018" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="severity" class="form-label">Indicated Symptoms Severity</label>
+                        <select class="form-select" id="severity" name="severity" required>
+                            <option value="Low">Low (Minor annoyance / warning light)</option>
+                            <option value="Medium" selected>Medium (Performance issues / weird sounds)</option>
+                            <option value="High">High (Dead car / smoke / braking failure)</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label for="problem_description" class="form-label">Describe Symptoms / Problems</label>
+                        <textarea class="form-control" id="problem_description" name="problem_description" rows="3" placeholder="Describe what happens. E.g., engine is knocking, headlights flickering, brake squeaking, transmission slipping, car won't crank..." required>Car won't crank. Click sound when turning the key.</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="ecu_data" class="form-label">ECU OBD-II Error Code (if any)</label>
+                        <input type="text" class="form-control" id="ecu_data" name="ecu_data" placeholder="E.g., P0101, P0300, None" value="None">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="service_history" class="form-label">Recent Service History Notes</label>
+                        <input type="text" class="form-control" id="service_history" name="service_history" placeholder="E.g. Spark plugs replaced last year, oil change 3 months ago" value="Oil change 3 months ago">
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-warning text-dark btn-lg fw-bold py-2"><i class="fa-solid fa-wand-magic-sparkles me-2"></i> Run Intelligent Diagnosis</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        {% if result %}
+        <div class="result-card h-100" style="background: linear-gradient(135deg, #fffaf0 0%, #feebc8 100%); border-color: #fbd38d;">
+            <h4 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-stethoscope text-warning me-2"></i> Diagnostics Report</h4>
+            
+            <div class="mb-4 bg-white p-3 rounded shadow-sm border-start border-warning border-4">
+                <div class="text-muted small text-uppercase fw-bold">ML Classified Problem Area</div>
+                <div class="fs-3 fw-bold text-dark mt-1"><i class="fa-solid fa-gears text-primary me-2"></i> {{ result.problem }}</div>
+            </div>
+
+            <div class="mb-4 bg-white p-3 rounded shadow-sm border-start border-danger border-4">
+                <div class="text-muted small text-uppercase fw-bold">Incident Urgency & Severity</div>
+                <div class="mt-2">
+                    <span class="diagnosis-badge severity-{{ result.severity|lower }}">{{ result.severity|upper }} SEVERITY</span>
+                </div>
+            </div>
+
+            <div class="mb-4 bg-white p-3 rounded shadow-sm border-start border-info border-4">
+                <div class="text-muted small text-uppercase fw-bold">Recommended Repair Action</div>
+                <p class="mt-2 mb-0 fw-semibold text-dark">{{ result.recommendation }}</p>
+            </div>
+
+            <div class="mb-4 bg-white p-3 rounded shadow-sm border-start border-secondary border-4">
+                <div class="text-muted small text-uppercase fw-bold"><i class="fa-solid fa-circle-xmark text-danger me-1"></i> Parts to Replace</div>
+                <p class="mt-2 mb-0 fw-bold text-danger">{{ result.parts_replace }}</p>
+            </div>
+
+            <div class="bg-white p-3 rounded shadow-sm border-start border-primary border-4">
+                <div class="text-muted small text-uppercase fw-bold"><i class="fa-solid fa-wrench text-success me-1"></i> Parts to Repair / Adjust</div>
+                <p class="mt-2 mb-0 fw-bold text-success">{{ result.parts_repair }}</p>
+            </div>
+            
+            <div class="mt-4 border-top border-warning-subtle pt-3 text-muted small">
+                Tested Vehicle: <span class="fw-bold">{{ input_data.vehicle_brand }} {{ input_data.vehicle_model }}</span> | Mfg. Year: <span class="fw-bold">{{ input_data.manufacturing_year }}</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm p-5 h-100 d-flex flex-column justify-content-center align-items-center text-center text-muted">
+            <i class="fa-solid fa-stethoscope fs-1 text-warning mb-3"></i>
+            <h5>Awaiting Diagnostic Trigger</h5>
+            <p class="small mb-0">Fill in the vehicle symptoms, error codes, and details on the left, then click 'Run Intelligent Diagnosis' to perform XGBoost problem classification and retrieve automated repair guidelines.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // AJAX to load models dynamically based on brand selection
+    const brandSelect = document.getElementById("vehicle_brand");
+    const modelSelect = document.getElementById("vehicle_model");
+
+    brandSelect.addEventListener("change", function() {
+        const brand = this.value;
+        modelSelect.innerHTML = "<option value=''>Loading models...</option>";
+        
+        if (brand === "") {
+            modelSelect.innerHTML = "<option value=''>Select Model (Choose Brand First)</option>";
+            return;
+        }
+
+        fetch(`/api/models/${brand}`)
+            .then(response => response.json())
+            .then(models => {
+                modelSelect.innerHTML = "<option value=''>Select Model</option>";
+                models.forEach(model => {
+                    const opt = document.createElement("option");
+                    opt.value = model;
+                    opt.textContent = model;
+                    modelSelect.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                modelSelect.innerHTML = "<option value=''>Error loading models</option>";
+                console.error(err);
+            });
+    });
+</script>
+{% endblock %}

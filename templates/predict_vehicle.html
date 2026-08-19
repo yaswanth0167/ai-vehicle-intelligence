@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-7">
+        <div class="prediction-form-card">
+            <h5 class="fw-bold mb-4"><i class="fa-solid fa-calculator text-primary me-2"></i> Predict Repair Cost & Duration</h5>
+            
+            <form id="predictionForm" action="{{ url_for('predict_vehicle') }}" method="POST">
+                <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. Vehicle Information</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="vehicle_brand" class="form-label">Brand</label>
+                        <select class="form-select" id="vehicle_brand" name="vehicle_brand" required>
+                            <option value="">Select Brand</option>
+                            {% for b in brands %}
+                            <option value="{{ b }}">{{ b }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="vehicle_model" class="form-label">Model</label>
+                        <select class="form-select" id="vehicle_model" name="vehicle_model" required>
+                            <option value="">Select Model (Choose Brand First)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="vehicle_type" class="form-label">Vehicle Type</label>
+                        <select class="form-select" id="vehicle_type" name="vehicle_type" required>
+                            <option value="Car">Car</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Truck">Truck</option>
+                            <option value="Motorcycle">Motorcycle</option>
+                            <option value="Bus">Bus</option>
+                            <option value="Van">Van</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="fuel_type" class="form-label">Fuel Type</label>
+                        <select class="form-select" id="fuel_type" name="fuel_type" required>
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="CNG">CNG</option>
+                            <option value="Electric">Electric</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="transmission" class="form-label">Transmission</label>
+                        <select class="form-select" id="transmission" name="transmission" required>
+                            <option value="Manual">Manual</option>
+                            <option value="Automatic">Automatic</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="manufacturing_year" class="form-label">Mfg. Year</label>
+                        <input type="number" class="form-control" id="manufacturing_year" name="manufacturing_year" min="1990" max="2026" value="2018" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="mileage" class="form-label">Mileage (Miles)</label>
+                        <input type="number" class="form-control" id="mileage" name="mileage" min="0" value="45000" required>
+                    </div>
+                </div>
+
+                <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">2. Service & Maintenance Details</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="service_type" class="form-label">Service Type</label>
+                        <select class="form-select" id="service_type" name="service_type" required>
+                            <option value="Oil Change">Oil Change</option>
+                            <option value="Engine Tune-up">Engine Tune-up</option>
+                            <option value="Brake Repair">Brake Repair</option>
+                            <option value="Transmission Repair">Transmission Repair</option>
+                            <option value="Suspension Repair">Suspension Repair</option>
+                            <option value="Battery Replacement">Battery Replacement</option>
+                            <option value="Tire Rotation">Tire Rotation</option>
+                            <option value="General Diagnostics">General Diagnostics</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="estimated_cost" class="form-label">Estimated Base Cost ($)</label>
+                        <input type="number" step="0.01" class="form-control" id="estimated_cost" name="estimated_cost" min="0" value="120.00" required>
+                    </div>
+                    <div class="col-12">
+                        <label for="service_description" class="form-label">Service Description</label>
+                        <input type="text" class="form-control" id="service_description" name="service_description" value="Standard mileage service with checks." required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="parts_used" class="form-label">Parts to Use (Comma Separated)</label>
+                        <input type="text" class="form-control" id="parts_used" name="parts_used" value="Engine Oil, Oil Filter" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="warranty_information" class="form-label">Warranty Requested</label>
+                        <select class="form-select" id="warranty_information" name="warranty_information" required>
+                            <option value="No Warranty">No Warranty</option>
+                            <option value="90 days on labor">90 days on labor</option>
+                            <option value="12 months parts & labor">12 months parts & labor</option>
+                            <option value="24 months parts & labor">24 months parts & labor</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="customer_type" class="form-label">Customer Type</label>
+                        <select class="form-select" id="customer_type" name="customer_type" required>
+                            <option value="Individual">Individual</option>
+                            <option value="Fleet">Fleet</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="urgency_level" class="form-label">Urgency Level</label>
+                        <select class="form-select" id="urgency_level" name="urgency_level" required>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="technician_rating" class="form-label">Tech Rating Required</label>
+                        <input type="number" step="0.1" class="form-control" id="technician_rating" name="technician_rating" min="1.0" max="5.0" value="4.5" required>
+                    </div>
+                </div>
+
+                <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">3. Towing & Insurance Settings</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="tow_distance_miles" class="form-label">Towing Distance (Miles)</label>
+                        <input type="number" step="0.1" class="form-control" id="tow_distance_miles" name="tow_distance_miles" min="0" value="0.0" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="insurance_claim_used" class="form-label">Will File Insurance Claim?</label>
+                        <select class="form-select" id="insurance_claim_used" name="insurance_claim_used" required>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg fw-bold py-2"><i class="fa-solid fa-play me-2"></i> Compute ML Predictions</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        {% if result %}
+        <div class="result-card h-100">
+            <h4 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-square-poll-vertical text-primary me-2"></i> ML Prediction Results</h4>
+            
+            <div class="mb-4 bg-white p-3 rounded shadow-sm border-start border-primary border-4">
+                <div class="text-muted small text-uppercase fw-bold">Predicted Total Repair Cost</div>
+                <div class="result-value-badge mt-2 pulse-glow">${{ result.predicted_cost }}</div>
+                <div class="text-muted small mt-2">Adjusted from base estimate of ${{ result.estimated_cost }}</div>
+            </div>
+
+            <div class="mb-4 bg-white p-3 rounded shadow-sm border-start border-success border-4">
+                <div class="text-muted small text-uppercase fw-bold">Predicted Service Duration</div>
+                <div class="result-value-badge mt-2 text-success pulse-glow" style="color: #276749 !important;">{{ result.predicted_time }} Hours</div>
+                <div class="text-muted small mt-2">Based on vehicle age, technician rating, and service type.</div>
+            </div>
+
+            <div class="mb-4 bg-white p-3 rounded shadow-sm border-start border-warning border-4">
+                <div class="text-muted small text-uppercase fw-bold">Insurance Claim Approval</div>
+                {% if result.insurance_claim_approved == 1 %}
+                <div class="badge bg-success fs-5 px-3 py-2 mt-2"><i class="fa-solid fa-circle-check me-2"></i> Approved ({{ result.insurance_claim_probability }}% Prob.)</div>
+                {% else %}
+                <div class="badge bg-danger fs-5 px-3 py-2 mt-2"><i class="fa-solid fa-circle-xmark me-2"></i> Denied ({{ result.insurance_claim_probability }}% Prob.)</div>
+                {% endif %}
+                <div class="text-muted small mt-2">Calculated over historical carrier claim decisions.</div>
+            </div>
+
+            <div class="mt-4 border-top pt-3">
+                <h6 class="fw-bold text-dark mb-2">Input Vehicle Context:</h6>
+                <table class="table table-sm table-borderless text-muted small">
+                    <tr><td>Vehicle:</td><td class="fw-bold text-dark">{{ result.vehicle_brand }} {{ result.vehicle_model }} ({{ result.vehicle_type }})</td></tr>
+                    <tr><td>Year / Age:</td><td class="fw-bold text-dark">{{ result.manufacturing_year }} ({{ result.vehicle_age }} Years)</td></tr>
+                    <tr><td>Mileage:</td><td class="fw-bold text-dark">{{ result.mileage }} Miles</td></tr>
+                    <tr><td>Service Type:</td><td class="fw-bold text-dark">{{ result.service_type }}</td></tr>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm p-5 h-100 d-flex flex-column justify-content-center align-items-center text-center text-muted">
+            <i class="fa-solid fa-microchip fs-1 text-primary mb-3"></i>
+            <h5>Awaiting Calculation</h5>
+            <p class="small mb-0">Fill in the vehicle and service details on the left, then click 'Compute ML Predictions' to run XGBoost regression & classification models.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // AJAX to load models dynamically based on brand selection
+    const brandSelect = document.getElementById("vehicle_brand");
+    const modelSelect = document.getElementById("vehicle_model");
+
+    brandSelect.addEventListener("change", function() {
+        const brand = this.value;
+        modelSelect.innerHTML = "<option value=''>Loading models...</option>";
+        
+        if (brand === "") {
+            modelSelect.innerHTML = "<option value=''>Select Model (Choose Brand First)</option>";
+            return;
+        }
+
+        fetch(`/api/models/${brand}`)
+            .then(response => response.json())
+            .then(models => {
+                modelSelect.innerHTML = "<option value=''>Select Model</option>";
+                models.forEach(model => {
+                    const opt = document.createElement("option");
+                    opt.value = model;
+                    opt.textContent = model;
+                    modelSelect.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                modelSelect.innerHTML = "<option value=''>Error loading models</option>";
+                console.error(err);
+            });
+    });
+</script>
+{% endblock %}

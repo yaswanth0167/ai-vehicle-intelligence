@@ -1,0 +1,28 @@
+# Python cache & environment
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+.env
+*.log
+
+# Large CSV datasets & cleaning exports
+cleaned/
+datasets/
+
+# Local MySQL binary databases
+database/mysql_data/
+
+# IDE & system generation files
+.vscode/
+.idea/
+.gemini/
+.system_generated/
+scratch/
+walkthrough.md
+implementation_plan.md
+task.md

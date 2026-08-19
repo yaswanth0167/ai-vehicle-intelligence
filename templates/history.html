@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card border-0 shadow-sm p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left text-primary me-2"></i> Predictions History Log</h5>
+        <div>
+            <span class="badge bg-primary px-3 py-2"><i class="fa-solid fa-file-invoice me-1"></i> Total Runs: {{ history|length }}</span>
+        </div>
+    </div>
+
+    {% if history %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    {% if session['user']['role'] == 'admin' %}
+                    <th>User</th>
+                    {% endif %}
+                    <th>Vehicle Details</th>
+                    <th>Service details</th>
+                    <th class="text-end">Est. Cost</th>
+                    <th class="text-end">Predicted Cost</th>
+                    <th class="text-center">Pred. Time</th>
+                    <th class="text-center">Insurance Approval</th>
+                    <th>Diagnostics & Symptoms</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in history %}
+                <tr>
+                    <td><small class="text-muted">{{ row.date }}</small></td>
+                    {% if session['user']['role'] == 'admin' %}
+                    <td><span class="badge bg-secondary">{{ row.username }}</span></td>
+                    {% endif %}
+                    <td>
+                        <span class="fw-semibold">{{ row.vehicle_brand }} {{ row.vehicle_model }}</span><br>
+                        <small class="text-muted">{{ row.vehicle_type }} | Mfg: {{ row.manufacturing_year }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-info text-dark">{{ row.service_type }}</span><br>
+                        <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">{{ row.parts_used }}</small>
+                    </td>
+                    <td class="text-end text-muted">${{ "%.2f"|format(row.estimated_cost) }}</td>
+                    <td class="text-end fw-bold text-primary">${{ "%.2f"|format(row.predicted_cost) }}</td>
+                    <td class="text-center fw-bold">{{ row.predicted_time }} hrs</td>
+                    <td class="text-center">
+                        {% if row.insurance_claim_approved == 1 %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-circle-check"></i> Approved</span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fa-solid fa-circle-xmark"></i> Denied</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.diagnosis_problem %}
+                        <span class="diagnosis-badge severity-{{ row.diagnosis_severity|lower }}">{{ row.diagnosis_problem }} ({{ row.diagnosis_severity }})</span>
+                        {% else %}
+                        <span class="text-muted small">N/A</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="fa-solid fa-ban fs-1 mb-3"></i>
+        <h5>No History Found</h5>
+        <p class="small mb-0">Run predictions inside the Compute or Diagnostics forms to populate this predictions history log.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Vehicle & Insurance Intelligence System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Apply theme immediately in head to prevent FOUC (flicker of unstyled content)
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+</head>
+<body>
+    <!-- Top Progress Bar -->
+    <div class="top-loading-bar" id="topProgress"></div>
+
+    <!-- Floating Background Neon Light Blobs -->
+    <div class="neon-bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    {% if session.get('user') %}
+    <!-- Sidebar Backdrop Overlay for Mobile -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="appSidebar">
+        <!-- Close button for Mobile inside sidebar -->
+        <button class="btn-close btn-close-white d-md-none position-absolute" onclick="toggleMobileSidebar()" style="top: 20px; right: 20px;" aria-label="Close"></button>
+        
+        <div class="brand-title">
+            <i class="fa-solid fa-car-rear spin-slow-icon"></i> AI AutoIntel
+        </div>
+        <div class="sidebar-menu">
+            <a href="{{ url_for('dashboard') }}" class="{% if request.path == url_for('dashboard') %}active{% endif %}">
+                <i class="fa-solid fa-gauge me-2"></i> <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('predict_vehicle') }}" class="{% if request.path == url_for('predict_vehicle') %}active{% endif %}">
+                <i class="fa-solid fa-calculator me-2"></i> <span>Predict Cost & Time</span>
+            </a>
+            <a href="{{ url_for('predict_diagnosis') }}" class="{% if request.path == url_for('predict_diagnosis') %}active{% endif %}">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i> <span>Diagnostic Scan</span>
+            </a>
+            <a href="{{ url_for('predict_fraud_route') }}" class="{% if request.path == url_for('predict_fraud_route') %}active{% endif %}">
+                <i class="fa-solid fa-shield-halved me-2"></i> <span>Fraud Analytics</span>
+            </a>
+            <a href="{{ url_for('history') }}" class="{% if request.path == url_for('history') %}active{% endif %}">
+                <i class="fa-solid fa-clock-rotate-left me-2"></i> <span>Predictions History</span>
+            </a>
+            {% if session['user']['role'] == 'admin' %}
+            <a href="{{ url_for('admin_panel') }}" class="{% if request.path == url_for('admin_panel') %}active{% endif %}">
+                <i class="fa-solid fa-user-tie me-2"></i> <span>Admin Panel</span>
+            </a>
+            {% endif %}
+        </div>
+        <div class="p-2">
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm text-white w-100 py-2 border-0" style="background-color: rgba(239, 68, 68, 0.1);">
+                <i class="fa-solid fa-right-from-bracket me-2"></i> <span>Log Out</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="top-header">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-outline-secondary border-0 d-md-none me-3 fs-5" id="mobileSidebarToggle" onclick="toggleMobileSidebar()" style="background: rgba(255, 255, 255, 0.05); padding: 5px 10px;">
+                    <i class="fa-solid fa-bars text-white" id="hamburgerIcon"></i>
+                </button>
+                <div>
+                    <h4 class="mb-0 fw-bold">Welcome, {{ session['user']['username'] }}</h4>
+                    <small class="text-muted">Role: <span class="badge bg-secondary">{{ session['user']['role']|upper }}</span></small>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary btn-sm border-0 me-3 fs-5" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" style="background: rgba(255, 255, 255, 0.05); padding: 5px 10px;">
+                    <i class="fa-solid fa-moon text-primary" id="themeIcon"></i>
+                </button>
+                <span class="me-3 fw-bold" style="color: #818cf8 !important; text-shadow: 0 0 10px rgba(99, 102, 241, 0.4);"><i class="fa-regular fa-calendar-days me-1 text-primary"></i> {{ datetime_now_str }}</span>
+                <span class="badge bg-primary px-3 py-2"><i class="fa-solid fa-circle-user me-1"></i> {{ session['user']['email'] }}</span>
+            </div>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Body content -->
+        {% block content %}{% endblock %}
+    </div>
+    {% else %}
+        <!-- Floating Theme Toggler for Login/Register Pages -->
+        <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+            <button class="btn btn-outline-secondary btn-sm border-0 fs-5" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" style="background: rgba(255, 255, 255, 0.05); padding: 5px 10px;">
+                <i class="fa-solid fa-moon text-primary" id="themeIcon"></i>
+            </button>
+        </div>
+        <!-- Simple background for login/registration pages -->
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="row mt-4">
+                        <div class="col-md-4 offset-md-4">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endwith %}
+            {% block auth_content %}{% endblock %}
+        </div>
+    {% endif %}
+
+    <!-- High VFX Cyberpunk Road & Speeding Car Background -->
+    <div class="road-container">
+        <!-- Speed Lines VFX -->
+        <div class="speed-line sl-1"></div>
+        <div class="speed-line sl-2"></div>
+        <div class="speed-line sl-3"></div>
+
+        <div class="vfx-car">
+            <!-- Flame VFX -->
+            <div class="exhaust-flame"></div>
+            <!-- Smoke VFX -->
+            <div class="smoke-particle sm-1"></div>
+            <div class="smoke-particle sm-2"></div>
+            <div class="smoke-particle sm-3"></div>
+            
+            <!-- Car Body -->
+            <div class="car-body">
+                <div class="car-cockpit"></div>
+                <div class="car-headlight"></div>
+                <div class="car-underglow"></div>
+            </div>
+            
+            <!-- Rotating Wheels VFX -->
+            <div class="vfx-wheel wheel-left">
+                <div class="wheel-spoke"></div>
+            </div>
+            <div class="vfx-wheel wheel-right">
+                <div class="wheel-spoke"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculation Loader Overlay -->
+    <div class="calculation-loader" id="pageLoader">
+        <div class="loader-spinner mb-4"></div>
+        <h5 class="fw-bold">Running Machine Learning Inference...</h5>
+        <p class="text-white-50 small">Ensemble algorithms analyzing features and computing predictions</p>
+    </div>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize Top Progress Loader on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const progress = document.getElementById('topProgress');
+            if (progress) {
+                progress.style.width = '100%';
+                setTimeout(() => {
+                    progress.style.opacity = '0';
+                }, 400);
+            }
+        });
+
+        // Animate Top Progress Loader on clicking links
+        document.querySelectorAll('a').forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && !href.startsWith('#') && !href.startsWith('javascript') && !link.target && !link.classList.contains('dropdown-toggle')) {
+                link.addEventListener('click', function(e) {
+                    // Skip if modifier key pressed
+                    if (e.ctrlKey || e.metaKey) return;
+                    
+                    const progress = document.getElementById('topProgress');
+                    if (progress) {
+                        progress.style.opacity = '1';
+                        progress.style.width = '70%';
+                    }
+                });
+            }
+        });
+
+        // Catch form submissions on prediction pages and show loader
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            if (!form.action.includes('login') && !form.action.includes('register')) {
+                form.addEventListener('submit', function() {
+                    const progress = document.getElementById('topProgress');
+                    if (progress) {
+                        progress.style.opacity = '1';
+                        progress.style.width = '90%';
+                    }
+                    const loader = document.getElementById('pageLoader');
+                    if (loader) {
+                        loader.style.display = 'flex';
+                    }
+                });
+            }
+        });
+        // Theme Toggle Functions
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                if (theme === 'light') {
+                    icon.classList.remove('fa-moon');
+                    icon.classList.add('fa-sun');
+                } else {
+                    icon.classList.remove('fa-sun');
+                    icon.classList.add('fa-moon');
+                }
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = localStorage.getItem('theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+
+        // Mobile Sidebar Toggle
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (sidebar && backdrop) {
+                sidebar.classList.toggle('mobile-show');
+                backdrop.classList.toggle('show');
+            }
+        }
+
+        // Apply theme icon state on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            setTheme(savedTheme);
+        });
+    </script>
+</body>
+</html>

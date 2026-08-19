@@ -1,0 +1,23 @@
+services:
+  # Web service for the Flask Web Application
+  - type: web
+    name: autointel-system
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: FLASK_ENV
+        value: production
+      # Set these in the Render dashboard after obtaining database credentials
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        value: "3306"

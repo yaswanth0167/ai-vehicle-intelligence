@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="welcome-hero">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2 class="fw-bold mb-2"><i class="fa-solid fa-wand-magic-sparkles text-warning me-2"></i> AutoIntel Core Dashboard</h2>
+            <p class="mb-0 text-white-50">Enterprise-grade machine learning analytics. Project service repair costs, predict diagnostic fault areas, and audit insurance claims in real time.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <span class="badge bg-white text-dark p-3 fs-6 rounded-pill fw-bold shadow-sm">
+                <i class="fa-solid fa-microchip text-primary me-2"></i> XGBoost Engine Online
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Metric 1 -->
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="metric-card card-blue">
+            <div class="metric-title">Total Records & Predictions</div>
+            <div class="metric-value">{{ stats.total_predictions }}</div>
+            <small class="text-muted"><i class="fa-solid fa-database"></i> Database size</small>
+        </div>
+    </div>
+    <!-- Metric 2 -->
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="metric-card card-green">
+            <div class="metric-title">Average Repair Cost</div>
+            <div class="metric-value">${{ stats.avg_repair_cost }}</div>
+            <small class="text-muted"><i class="fa-solid fa-money-check-dollar"></i> Global average</small>
+        </div>
+    </div>
+    <!-- Metric 3 -->
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="metric-card card-orange">
+            <div class="metric-title">Average Repair Time</div>
+            <div class="metric-value">{{ stats.avg_repair_time }} hrs</div>
+            <small class="text-muted"><i class="fa-solid fa-hourglass-half"></i> Average duration</small>
+        </div>
+    </div>
+    <!-- Metric 4 -->
+    <div class="col-lg-3 col-md-6 col-12">
+        <div class="metric-card card-red">
+            <div class="metric-title">Insurance Claim Approval</div>
+            <div class="metric-value">{{ stats.insurance_approval_percentage }}%</div>
+            <small class="text-muted"><i class="fa-solid fa-circle-check"></i> Approval rate</small>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-8 col-12 mb-4 mb-lg-0">
+        <div class="card border-0 shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-line text-primary me-2"></i> Monthly Cost Analysis</h5>
+            <div style="height: 300px;">
+                <canvas id="monthlyCostChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-12 mb-4 mb-lg-0">
+        <div class="card border-0 shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie text-success me-2"></i> Service Type Shares</h5>
+            <div style="height: 300px;">
+                <canvas id="serviceShareChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-circle-info text-warning me-2"></i> Core Modules</h5>
+            <div class="d-grid gap-3">
+                <a href="{{ url_for('predict_vehicle') }}" class="btn btn-outline-primary text-start p-3 border-2">
+                    <h6 class="fw-bold mb-1"><i class="fa-solid fa-calculator me-2"></i> Predict Cost & Duration</h6>
+                    <small class="text-muted">Perform regression analysis on total service charge & time requirements using XGBoost models.</small>
+                </a>
+                <a href="{{ url_for('predict_diagnosis') }}" class="btn btn-outline-success text-start p-3 border-2">
+                    <h6 class="fw-bold mb-1"><i class="fa-solid fa-triangle-exclamation me-2"></i> Diagnostic Scanning & Recommendations</h6>
+                    <small class="text-muted">Enter symptoms & OBD fault codes to predict problem categories and replacement parts.</small>
+                </a>
+                <a href="{{ url_for('predict_fraud_route') }}" class="btn btn-outline-danger text-start p-3 border-2">
+                    <h6 class="fw-bold mb-1"><i class="fa-solid fa-shield-halved me-2"></i> Claims Fraud Detection</h6>
+                    <small class="text-muted">Audit claim profiles using class-weighted classification models to isolate high-risk claims.</small>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i> Most Common Vehicle Problems</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Problem Category</th>
+                            <th class="text-center">Recorded Incidents</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for problem in stats.common_problems %}
+                        <tr>
+                            <td>
+                                <i class="fa-solid fa-circle-dot text-danger me-2"></i>
+                                <span class="fw-semibold">{{ problem.problem }}</span>
+                            </td>
+                            <td class="text-center fw-bold">{{ problem.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Monthly Cost Line Chart
+    const monthlyCtx = document.getElementById('monthlyCostChart').getContext('2d');
+    const monthlyLabels = [{% for item in stats.monthly_reports %}"{{ item.month }}",{% endfor %}];
+    const monthlyData = [{% for item in stats.monthly_reports %}{{ item.total_cost }},{% endfor %}];
+    
+    // Create Gradient Fill
+    const gradient = monthlyCtx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.3)');
+    gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+    
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Monthly Repair Cost ($)',
+                data: monthlyData,
+                borderColor: '#4f46e5',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Service Share Pie Chart
+    const serviceCtx = document.getElementById('serviceShareChart').getContext('2d');
+    const serviceLabels = [{% for item in stats.service_type_stats %}"{{ item.service_type }}",{% endfor %}];
+    const serviceData = [{% for item in stats.service_type_stats %}{{ item.count }},{% endfor %}];
+    
+    new Chart(serviceCtx, {
+        type: 'pie',
+        data: {
+            labels: serviceLabels,
+            datasets: [{
+                data: serviceData,
+                backgroundColor: [
+                    '#3182ce', '#38b2ac', '#48bb78', '#ed8936', '#ecc94b', '#e53e3e'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+</script>
+{% endblock %}

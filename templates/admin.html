@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-user-tie text-primary me-2"></i> Admin Management & Analytics</h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('export_csv') }}" class="btn btn-success fw-bold"><i class="fa-solid fa-file-excel me-1"></i> Export CSV</a>
+        <a href="{{ url_for('export_pdf') }}" class="btn btn-danger fw-bold"><i class="fa-solid fa-file-pdf me-1"></i> Export PDF Report</a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Stat 1 -->
+    <div class="col-md-3">
+        <div class="metric-card card-blue">
+            <div class="metric-title">System Calculations</div>
+            <div class="metric-value">{{ stats.total_predictions }}</div>
+            <small class="text-muted"><i class="fa-solid fa-calculator"></i> Total runs + records</small>
+        </div>
+    </div>
+    <!-- Stat 2 -->
+    <div class="col-md-3">
+        <div class="metric-card card-green">
+            <div class="metric-title">Avg Repair Bill</div>
+            <div class="metric-value">${{ stats.avg_repair_cost }}</div>
+            <small class="text-muted"><i class="fa-solid fa-money-bill-wave"></i> Gross average cost</small>
+        </div>
+    </div>
+    <!-- Stat 3 -->
+    <div class="col-md-3">
+        <div class="metric-card card-orange">
+            <div class="metric-title">Avg Repair Duration</div>
+            <div class="metric-value">{{ stats.avg_repair_time }} hrs</div>
+            <small class="text-muted"><i class="fa-solid fa-clock"></i> Average repair time</small>
+        </div>
+    </div>
+    <!-- Stat 4 -->
+    <div class="col-md-3">
+        <div class="metric-card card-red">
+            <div class="metric-title">Claims Approved</div>
+            <div class="metric-value">{{ stats.insurance_approval_percentage }}%</div>
+            <small class="text-muted"><i class="fa-solid fa-circle-check"></i> Overall approval rate</small>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-line text-primary me-2"></i> Monthly Revenue Stream</h5>
+            <div style="height: 250px;">
+                <canvas id="adminMonthlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie text-success me-2"></i> Service Category Analysis</h5>
+            <div style="height: 250px;">
+                <canvas id="adminServiceChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm p-4">
+    <h5 class="fw-bold mb-4"><i class="fa-solid fa-list-check text-primary me-2"></i> Global System Log & User Predictions</h5>
+    
+    {% if history %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Vehicle Details</th>
+                    <th>Service details</th>
+                    <th class="text-end">Est. Cost</th>
+                    <th class="text-end">Predicted Cost</th>
+                    <th class="text-center">Pred. Time</th>
+                    <th class="text-center">Insurance Approval</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in history %}
+                <tr>
+                    <td><small class="text-muted">{{ row.date }}</small></td>
+                    <td><span class="badge bg-secondary">{{ row.username }}</span></td>
+                    <td>
+                        <span class="fw-semibold">{{ row.vehicle_brand }} {{ row.vehicle_model }}</span><br>
+                        <small class="text-muted">{{ row.vehicle_type }} | Year: {{ row.manufacturing_year }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-info text-dark">{{ row.service_type }}</span><br>
+                        <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">{{ row.parts_used }}</small>
+                    </td>
+                    <td class="text-end text-muted">${{ "%.2f"|format(row.estimated_cost) }}</td>
+                    <td class="text-end fw-bold text-primary">${{ "%.2f"|format(row.predicted_cost) }}</td>
+                    <td class="text-center fw-bold">{{ row.predicted_time }} hrs</td>
+                    <td class="text-center">
+                        {% if row.insurance_claim_approved == 1 %}
+                        <span class="badge bg-success"><i class="fa-solid fa-circle-check"></i> Approved</span>
+                        {% else %}
+                        <span class="badge bg-danger"><i class="fa-solid fa-circle-xmark"></i> Denied</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="fa-solid fa-ban fs-1 mb-3"></i>
+        <h5>No prediction logs available.</h5>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Line Chart
+    const adminMonthlyCtx = document.getElementById('adminMonthlyChart').getContext('2d');
+    const labels = [{% for item in stats.monthly_reports %}"{{ item.month }}",{% endfor %}];
+    const data = [{% for item in stats.monthly_reports %}{{ item.total_cost }},{% endfor %}];
+    
+    // Create Gradient Fill
+    const gradient = adminMonthlyCtx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+    gradient.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+    
+    new Chart(adminMonthlyCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Monthly Costs ($)',
+                data: data,
+                borderColor: '#ef4444',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    // Pie Chart
+    const adminServiceCtx = document.getElementById('adminServiceChart').getContext('2d');
+    const serviceLabels = [{% for item in stats.service_type_stats %}"{{ item.service_type }}",{% endfor %}];
+    const serviceData = [{% for item in stats.service_type_stats %}{{ item.count }},{% endfor %}];
+    
+    new Chart(adminServiceCtx, {
+        type: 'pie',
+        data: {
+            labels: serviceLabels,
+            datasets: [{
+                data: serviceData,
+                backgroundColor: [
+                    '#3182ce', '#38b2ac', '#48bb78', '#ed8936', '#ecc94b', '#e53e3e'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+</script>
+{% endblock %}
