@@ -2,25 +2,37 @@ import os
 import pandas as pd
 import mysql.connector
 from werkzeug.security import generate_password_hash
-
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "",
-    "port": 3306
-}
+from backend.db_helper import DB_CONFIG
 
 def init_database():
     print("========== INITIALIZING DATABASE ==========")
     
-    # Connect to MySQL Server
+    # 1. Connect without selecting database to try creating the database locally
+    db_config_no_db = DB_CONFIG.copy()
+    db_config_no_db.pop("database", None)
+    
+    try:
+        conn = mysql.connector.connect(**db_config_no_db)
+        cursor = conn.cursor()
+        # Try to create local database if we are running locally (will fail on online cloud DBs, which is fine)
+        try:
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']}")
+            print(f"Verified database '{DB_CONFIG['database']}' exists.")
+        except mysql.connector.Error:
+            pass
+        cursor.close()
+        conn.close()
+    except mysql.connector.Error as e:
+        print(f"Notice (connecting without db name): {e}")
+
+    # 2. Connect directly to target database
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
-        print("Connected to MySQL server successfully.")
+        print("Connected to target MySQL database successfully.")
     except mysql.connector.Error as e:
         print(f"Error connecting to MySQL: {e}")
-        print("Make sure your custom MySQL process is running on port 3306.")
+        print("Make sure your database server is running and configured correctly.")
         return
 
     # Read and execute schema.sql
@@ -35,6 +47,9 @@ def init_database():
         for query in queries:
             query = query.strip()
             if query:
+                # Skip CREATE DATABASE or USE statements to prevent errors on hosted databases
+                if query.upper().startswith("CREATE DATABASE") or query.upper().startswith("USE "):
+                    continue
                 try:
                     cursor.execute(query)
                 except mysql.connector.Error as e:
@@ -45,15 +60,6 @@ def init_database():
     else:
         print("schema.sql not found!")
         return
-
-    # Connect directly to the new database
-    cursor.close()
-    conn.close()
-    
-    db_config_with_db = DB_CONFIG.copy()
-    db_config_with_db["database"] = "vehicle_intelligence"
-    conn = mysql.connector.connect(**db_config_with_db)
-    cursor = conn.cursor()
 
     # Create Default Users if they do not exist
     print("Seeding default users...")

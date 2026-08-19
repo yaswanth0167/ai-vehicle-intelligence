@@ -13,6 +13,13 @@ from fpdf import FPDF
 app = Flask(__name__)
 app.secret_key = "vehicle_intelligence_secret_key"
 
+# Auto-initialize database tables and default accounts on boot
+try:
+    from database.init_db import init_database
+    init_database()
+except Exception as e:
+    print(f"Warning: Could not automatically initialize database: {e}")
+
 @app.context_processor
 def inject_datetime():
     return {
