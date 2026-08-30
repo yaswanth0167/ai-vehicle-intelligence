@@ -6,6 +6,7 @@ from backend.db_helper import DB_CONFIG
 
 def init_database():
     print("========== INITIALIZING DATABASE ==========")
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     # 1. Connect without selecting database to try creating the database locally
     db_config_no_db = DB_CONFIG.copy()
@@ -83,7 +84,7 @@ def init_database():
     conn.commit()
 
     # Seed Used Cars reference data (dropdowns)
-    used_car_clean_path = r"y:\AI_Vehicle_Service_Repair_Insurance_Intelligence\cleaned\used_car_clean.csv"
+    used_car_clean_path = os.path.join(project_root, "cleaned", "used_car_clean.csv")
     if os.path.exists(used_car_clean_path):
         print("Seeding used_car_records reference table...")
         cursor.execute("SELECT COUNT(*) FROM used_car_records")
@@ -122,7 +123,7 @@ def init_database():
         print(f"used_car_clean.csv not found at {used_car_clean_path}!")
 
     # Seed Historical Repair data (Dashboard statistics)
-    repair_clean_path = r"y:\AI_Vehicle_Service_Repair_Insurance_Intelligence\cleaned\repair_clean.csv"
+    repair_clean_path = os.path.join(project_root, "cleaned", "repair_clean.csv")
     if os.path.exists(repair_clean_path):
         print("Seeding repair_records dashboard statistics table...")
         cursor.execute("SELECT COUNT(*) FROM repair_records")

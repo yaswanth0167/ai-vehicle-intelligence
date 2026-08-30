@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 
 # Directory paths
-MODELS_DIR = r"y:\AI_Vehicle_Service_Repair_Insurance_Intelligence\models"
+MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
 
 # Lazy-loaded model containers
 models = {}

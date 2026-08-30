@@ -24,8 +24,9 @@ from sklearn.metrics import (
 def train_and_save_models():
     print("========== STARTING MODEL TRAINING PIPELINE ==========")
     
-    repair_clean_path = r"y:\AI_Vehicle_Service_Repair_Insurance_Intelligence\cleaned\repair_clean.csv"
-    models_dir = r"y:\AI_Vehicle_Service_Repair_Insurance_Intelligence\models"
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repair_clean_path = os.path.join(project_root, "cleaned", "repair_clean.csv")
+    models_dir = os.path.join(project_root, "models")
     os.makedirs(models_dir, exist_ok=True)
     
     if not os.path.exists(repair_clean_path):
