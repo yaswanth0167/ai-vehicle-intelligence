@@ -120,7 +120,48 @@ def init_database():
         else:
             print("used_car_records table already seeded.")
     else:
-        print(f"used_car_clean.csv not found at {used_car_clean_path}!")
+        print(f"used_car_clean.csv not found at {used_car_clean_path}. Seeding fallback used car records...")
+        cursor.execute("SELECT COUNT(*) FROM used_car_records")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            import random
+            fallback_brands = ["Maruti", "Hyundai", "Honda", "Toyota", "Ford", "Mahindra", "Tata", "Kia", "BMW", "Audi"]
+            fallback_models = {
+                "Maruti": ["Swift", "Baleno", "Alto", "Dzire", "WagonR"],
+                "Hyundai": ["i20", "Creta", "Verna", "Grand i10", "Santro"],
+                "Honda": ["City", "Civic", "Amaze", "Jazz", "WR-V"],
+                "Toyota": ["Innova", "Fortuner", "Corolla", "Camry", "Yaris"],
+                "Ford": ["EcoSport", "Figo", "Endeavour", "Aspire"],
+                "Mahindra": ["Thar", "Scorpio", "XUV500", "Bolero"],
+                "Tata": ["Nexon", "Harrier", "Safari", "Tiago"],
+                "Kia": ["Seltos", "Sonet", "Carnival"],
+                "BMW": ["3 Series", "5 Series", "X5", "X3"],
+                "Audi": ["A4", "A6", "Q5", "Q3"]
+            }
+            transmissions = ["Manual", "Automatic"]
+            fuel_types = ["Petrol", "Diesel", "CNG"]
+            owners = ["First", "Second", "Third"]
+            
+            insert_query = """
+                INSERT INTO used_car_records (brand, model, year, age, transmission, fuel_type, owner, km_driven, ask_price)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            data_to_insert = []
+            for _ in range(200):
+                brand = random.choice(fallback_brands)
+                model = random.choice(fallback_models[brand])
+                year = random.randint(2012, 2023)
+                age = 2026 - year
+                transmission = random.choice(transmissions)
+                fuel_type = random.choice(fuel_types)
+                owner = random.choice(owners)
+                km_driven = random.randint(5000, 150000)
+                ask_price = random.randint(200000, 2500000)
+                data_to_insert.append((brand, model, year, age, transmission, fuel_type, owner, km_driven, ask_price))
+            
+            cursor.executemany(insert_query, data_to_insert)
+            conn.commit()
+            print("Successfully seeded 200 mock used car records.")
 
     # Seed Historical Repair data (Dashboard statistics)
     repair_clean_path = os.path.join(project_root, "cleaned", "repair_clean.csv")
@@ -177,7 +218,55 @@ def init_database():
         else:
             print("repair_records table already seeded.")
     else:
-        print(f"repair_clean.csv not found at {repair_clean_path}!")
+        print(f"repair_clean.csv not found at {repair_clean_path}. Seeding fallback repair records...")
+        cursor.execute("SELECT COUNT(*) FROM repair_records")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            import random
+            from datetime import timedelta
+            vehicle_types = ["Car", "SUV", "Truck", "Van"]
+            makes_models = ["Hyundai i20", "Maruti Swift", "Honda City", "Toyota Innova", "Ford EcoSport", "Tata Nexon"]
+            service_types = ["Oil Change", "Brake Pad Replacement", "Transmission Repair", "Engine Diagnostics", "Tire Rotation", "AC Service"]
+            parts = {
+                "Oil Change": "Synthetic Oil, Oil Filter",
+                "Brake Pad Replacement": "Brake Pads, Rotor Shims",
+                "Transmission Repair": "Transmission Solenoid, Fluid",
+                "Engine Diagnostics": "Oxygen Sensor, Spark Plugs",
+                "Tire Rotation": "Wheel Weights",
+                "AC Service": "Refrigerant Gas, Cabin Filter"
+            }
+            urgencies = ["Low", "Medium", "High", "Critical"]
+            customer_types = ["Individual", "Corporate"]
+            
+            insert_query = """
+                INSERT INTO repair_records (vehicle_type, make_model, service_type, parts_used, total_cost,
+                                           estimated_cost, service_duration_hours, mileage_at_service,
+                                           insurance_claim_used, technician_rating, tow_distance_miles,
+                                           urgency_level, customer_type, repair_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            data_to_insert = []
+            start_date = datetime(2025, 1, 1)
+            for i in range(300):
+                v_type = random.choice(vehicle_types)
+                model = random.choice(makes_models)
+                service = random.choice(service_types)
+                part = parts[service]
+                est_cost = random.randint(100, 2500)
+                tot_cost = est_cost + random.randint(-50, 150)
+                duration = round(random.uniform(1.0, 8.0), 1)
+                mileage = random.randint(10000, 120000)
+                ins = random.choice(["Yes", "No"])
+                rating = round(random.uniform(3.0, 5.0), 1)
+                tow = round(random.uniform(0.0, 25.0), 1) if random.random() > 0.8 else 0.0
+                urgency = random.choice(urgencies)
+                cust_type = random.choice(customer_types)
+                rep_date = (start_date + timedelta(days=random.randint(0, 500))).strftime("%Y-%m-%d")
+                data_to_insert.append((v_type, model, service, part, tot_cost, est_cost, duration, mileage, ins, rating, tow, urgency, cust_type, rep_date))
+                
+            cursor.executemany(insert_query, data_to_insert)
+            conn.commit()
+            print("Successfully seeded 300 mock repair records.")
 
     cursor.close()
     conn.close()

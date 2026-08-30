@@ -20,6 +20,19 @@ def get_model(name):
             models[name] = None
     return models[name]
 
+# Pre-load all models on import to prevent first-time lag
+try:
+    for model_name in [
+        "repair_cost_model.pkl", "repair_cost_preprocessor.pkl", 
+        "repair_time_model.pkl", "repair_time_preprocessor.pkl",
+        "insurance_claim_model.pkl", "insurance_claim_preprocessor.pkl",
+        "final_dataset4_xgboost.pkl", "dataset4_preprocessor.pkl",
+        "final_fraud_xgboost.pkl", "fraud_preprocessor.pkl"
+    ]:
+        get_model(model_name)
+except Exception as e:
+    print(f"Notice: Pre-loading skipped or failed: {e}")
+
 # Helper to compute date features
 def extract_date_features(date_str):
     try:
@@ -153,7 +166,23 @@ def predict_diagnosis(data):
     # Columns: ['Car Name', 'Problem Description', 'Severity', 'Diagnosis', 'How to Fix the Problem', 
     #           'Solution Used', 'ECU Data', 'Service History', 'Car_Brand', 'Car_Year', 'Car_Age', 'Diagnosis_Severity']
     car_name = f"{data.get('vehicle_brand', '')} {data.get('vehicle_model', '')}".strip()
-    prob_desc = data.get("problem_description", "")
+    prob_desc = data.get("problem_description", "").strip()
+    
+    # Validation filter to prevent gibberish inputs from reaching the ML model
+    valid_keywords = ["engine", "brake", "noise", "vibrat", "light", "smoke", "leak", "start", 
+                      "battery", "shift", "clutch", "pedal", "power", "smell", "heat", "cool", 
+                      "fluid", "steer", "gear", "ac", "air", "fuse", "wire", "spark", "plug", "towing"]
+    is_valid = len(prob_desc) >= 8 and any(kw in prob_desc.lower() for kw in valid_keywords)
+    
+    if not is_valid:
+        return {
+            "problem": "Unrecognized Symptom",
+            "severity": "Low",
+            "recommendation": "Please describe your vehicle's symptoms in more detail (e.g., mention vibrations, smoke, fluid leaks, engine noises, or error lights).",
+            "parts_replace": "None Required",
+            "parts_repair": "None/Diagnostic Inspection Required"
+        }
+        
     input_severity = data.get("input_severity", "Medium")
     ecu_data = data.get("ecu_data", "Unknown")
     service_history = data.get("service_history", "None")
