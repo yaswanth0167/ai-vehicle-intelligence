@@ -113,14 +113,38 @@ def predict_repair_metrics(data):
         "Customer Type": [data.get("customer_type", "Individual")]
     }
 
-    # For Cost model, we need Service Duration Hours. We predict time first!
+    # Service baseline duration lookup
+    service_lower = str(data.get("service_type", "")).lower()
+    base_duration = 2.5
+    if any(k in service_lower for k in ["oil", "filter", "lube"]):
+        base_duration = 1.0
+    elif any(k in service_lower for k in ["tire", "wheel", "rotation"]):
+        base_duration = 0.8
+    elif any(k in service_lower for k in ["battery"]):
+        base_duration = 0.7
+    elif any(k in service_lower for k in ["brake", "pad", "rotor"]):
+        base_duration = 2.0
+    elif any(k in service_lower for k in ["ac", "air condition", "coolant", "flush"]):
+        base_duration = 1.8
+    elif any(k in service_lower for k in ["transmission", "clutch", "gear"]):
+        base_duration = 4.5
+    elif any(k in service_lower for k in ["engine", "overhaul", "head gasket", "timing"]):
+        base_duration = 6.5
+    elif any(k in service_lower for k in ["collision", "body", "paint"]):
+        base_duration = 8.0
+    elif any(k in service_lower for k in ["towing", "tow"]):
+        base_duration = 1.2
+
     # Predict Service Duration Hours
     time_df = pd.DataFrame(raw_df_data)
     time_df["Insurance Used"] = [insurance_used]
     time_proc = time_preprocessor.transform(time_df)
-    predicted_time = float(time_model.predict(time_proc)[0])
-    # Enforce realistic lower bound
-    predicted_time = max(0.5, round(predicted_time, 1))
+    ml_time = float(time_model.predict(time_proc)[0])
+    
+    # Harmonize ML prediction with realistic service baseline and technician rating
+    rating_factor = (5.0 - rating) / 4.0
+    predicted_time = round(base_duration * 0.7 + (ml_time / 3.0 * base_duration) * 0.3 * (0.9 + 0.1 * rating_factor), 1)
+    predicted_time = max(0.5, predicted_time)
 
     # Predict Total Cost
     cost_df = pd.DataFrame(raw_df_data)
