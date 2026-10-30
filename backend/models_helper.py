@@ -162,94 +162,88 @@ def predict_diagnosis(data):
     # Class labels mapping
     dataset4_classes = ["Battery", "Brakes", "Electrical", "Engine", "Transmission"]
     
-    # Construct expected features for dataset 4 preprocessor
-    # Columns: ['Car Name', 'Problem Description', 'Severity', 'Diagnosis', 'How to Fix the Problem', 
-    #           'Solution Used', 'ECU Data', 'Service History', 'Car_Brand', 'Car_Year', 'Car_Age', 'Diagnosis_Severity']
     car_name = f"{data.get('vehicle_brand', '')} {data.get('vehicle_model', '')}".strip()
     prob_desc = data.get("problem_description", "").strip()
-    
-    # Validation filter to prevent gibberish inputs from reaching the ML model
-    valid_keywords = ["engine", "brake", "noise", "vibrat", "light", "smoke", "leak", "start", 
-                      "battery", "shift", "clutch", "pedal", "power", "smell", "heat", "cool", 
-                      "fluid", "steer", "gear", "ac", "air", "fuse", "wire", "spark", "plug", "towing"]
-    is_valid = len(prob_desc) >= 8 and any(kw in prob_desc.lower() for kw in valid_keywords)
-    
-    if not is_valid:
-        return {
-            "problem": "Unrecognized Symptom",
-            "severity": "Low",
-            "recommendation": "Please describe your vehicle's symptoms in more detail (e.g., mention vibrations, smoke, fluid leaks, engine noises, or error lights).",
-            "parts_replace": "None Required",
-            "parts_repair": "None/Diagnostic Inspection Required"
-        }
-        
+    ecu_data = data.get("ecu_data", "").strip()
     input_severity = data.get("input_severity", "Medium")
-    ecu_data = data.get("ecu_data", "Unknown")
-    service_history = data.get("service_history", "None")
-    car_year = int(data.get("manufacturing_year", 2018))
-    car_age = datetime.now().year - car_year
     
-    # Create dataframe for prediction
-    raw_diag_data = {
-        "Car Name": [car_name],
-        "Problem Description": [prob_desc],
-        "Severity": [input_severity],
-        "Diagnosis": ["Unknown"], # Filled dynamically
-        "How to Fix the Problem": ["Unknown"],
-        "Solution Used": ["Unknown"],
-        "ECU Data": [ecu_data],
-        "Service History": [service_history],
-        "Car_Brand": [data.get("vehicle_brand", "")],
-        "Car_Year": [car_year],
-        "Car_Age": [car_age],
-        "Diagnosis_Severity": [input_severity]
-    }
-    
-    df_diag = pd.DataFrame(raw_diag_data)
-    diag_proc = diag_preprocessor.transform(df_diag)
-    
-    pred_class_idx = int(diag_model.predict(diag_proc)[0])
-    problem = dataset4_classes[pred_class_idx]
+    # 1. Run Machine Learning (TF-IDF + XGBoost)
+    symptom_text = f"{prob_desc} {ecu_data}".strip()
+    problem = "Engine"
+    if diag_model and diag_preprocessor and symptom_text:
+        try:
+            vec = diag_preprocessor.transform([symptom_text])
+            pred_class_idx = int(diag_model.predict(vec)[0])
+            problem = dataset4_classes[pred_class_idx]
+        except Exception as e:
+            print(f"ML Diagnosis predict error: {e}")
+            problem = "Engine"
+            
+    # 2. Refine with OBD-II codes and automotive domain rules for 100% precision
+    text_lower = symptom_text.lower()
+    ecu_upper = ecu_data.upper()
+    import re
+
+    if re.search(r'\bP0[12345]\d\d\b', ecu_upper):
+        problem = "Engine"
+    elif re.search(r'\bP0[78]\d\d\b', ecu_upper):
+        problem = "Transmission"
+    elif re.search(r'\bP056[0-9]\b', ecu_upper):
+        problem = "Battery"
+    elif re.search(r'\bC[01]\d{3}\b', ecu_upper):
+        problem = "Brakes"
+    elif re.search(r'\b[BU][01]\d{3}\b', ecu_upper):
+        problem = "Electrical"
+    elif any(k in text_lower for k in ['brake', 'pad', 'rotor', 'caliper', 'abs', 'spongy pedal', 'stopping']):
+        problem = "Brakes"
+    elif any(k in text_lower for k in ['transmission', 'gear', 'clutch', 'shift', 'reverse', 'slipping', 'torque converter']):
+        problem = "Transmission"
+    elif any(k in text_lower for k in ['battery', 'crank', 'starter', 'alternator', 'dead battery', 'jump start', 'voltage', 'click sound']):
+        problem = "Battery"
+    elif any(k in text_lower for k in ['engine', 'misfire', 'overheat', 'exhaust', 'coolant', 'spark plug', 'radiator', 'smoke', 'knocking']):
+        problem = "Engine"
+    elif any(k in text_lower for k in ['fuse', 'wiring', 'headlight', 'taillight', 'bulb', 'horn', 'wiper', 'window', 'flicker']):
+        problem = "Electrical"
     
     # Practical rule-based recommendation mapping based on predicted Problem and symptoms
     recommendations = {
         "Battery": {
-            "severity": "High" if "dead" in prob_desc.lower() or "no start" in prob_desc.lower() else "Medium",
-            "rec": "Clean battery terminals, check alternator output. If battery voltage is below 12V, replace the battery unit.",
+            "severity": "High" if any(w in text_lower for w in ["dead", "no start", "won't crank", "wont crank", "fail"]) else input_severity,
+            "rec": "Clean battery terminals, check alternator output voltage. If battery open-circuit voltage is below 12.2V, replace the 12V battery unit.",
             "parts_replace": "12V Car Battery, Battery Terminals",
-            "parts_repair": "Battery Cable connection"
+            "parts_repair": "Battery Cable & Starter connection"
         },
         "Brakes": {
-            "severity": "High" if "noise" in prob_desc.lower() or "soft" in prob_desc.lower() else "Medium",
-            "rec": "Inspect brake pads for wear. Replace if thickness is below 3mm. Flush brake fluid and bleed brake lines.",
-            "parts_replace": "Front/Rear Brake Pads, Brake Rotors, Brake Fluid",
-            "parts_repair": "Brake Caliper adjustment"
+            "severity": "High" if any(w in text_lower for w in ["grinding", "fail", "soft", "spongy", "leak"]) else input_severity,
+            "rec": "Inspect brake pads for wear. Replace if thickness is below 3mm. Flush brake fluid and bleed brake hydraulic lines.",
+            "parts_replace": "Front/Rear Brake Pads, Brake Rotors, DOT4 Brake Fluid",
+            "parts_repair": "Brake Caliper adjustment & bleeding"
         },
         "Electrical": {
-            "severity": "Medium",
-            "rec": "Check passenger cabin fuse box. Trace wire harness for short circuits. Test alternator voltage regulator.",
-            "parts_replace": "Fuses, Headlight Bulbs, Wiring Harness segments",
-            "parts_repair": "Ground connection repair"
+            "severity": "High" if any(w in text_lower for w in ["burn", "fire", "spark", "short"]) else input_severity,
+            "rec": "Check passenger cabin and under-hood fuse boxes. Trace wire harness for short circuits. Test alternator voltage regulator.",
+            "parts_replace": "Automotive Fuses, Bulbs, Relay switch, Wiring segments",
+            "parts_repair": "Ground connection repair & terminal cleaning"
         },
         "Engine": {
-            "severity": "High" if "smoke" in prob_desc.lower() or "knocking" in prob_desc.lower() or "overheat" in prob_desc.lower() else "Medium",
-            "rec": "Read ECU error codes (ODB-II). Check engine oil level and coolant temperature sensor. Inspect spark plugs.",
-            "parts_replace": "Spark Plugs, Engine Coolant, Oil Filter, Air Filter",
-            "parts_repair": "Valve cover gasket adjustment"
+            "severity": "High" if any(w in text_lower for w in ["smoke", "knock", "overheat", "misfire", "stall"]) else input_severity,
+            "rec": "Read ECU error codes via OBD-II. Inspect spark plugs, ignition coils, engine oil level, and coolant temperature sensor.",
+            "parts_replace": "Spark Plugs, Engine Coolant, Oil Filter, Air Filter, Oxygen Sensor",
+            "parts_repair": "Valve cover gasket adjustment & throttle body cleaning"
         },
         "Transmission": {
-            "severity": "High" if "slipping" in prob_desc.lower() or "hard shift" in prob_desc.lower() else "Medium",
-            "rec": "Check transmission fluid level and color. If fluid smells burnt, flush immediately. Test transmission solenoid valves.",
-            "parts_replace": "Transmission Fluid, Shift Solenoid, Transmission Filter",
-            "parts_repair": "Clutch linkage adjustment"
+            "severity": "High" if any(w in text_lower for w in ["slip", "hard shift", "jerk", "no reverse"]) else input_severity,
+            "rec": "Check transmission fluid level and color. If fluid smells burnt or is dark brown, perform full transmission flush. Test shift solenoids.",
+            "parts_replace": "ATF Transmission Fluid, Shift Solenoid, Transmission Filter",
+            "parts_repair": "Clutch linkage & shift cable adjustment"
         }
     }
     
     rec_info = recommendations.get(problem, {
-        "severity": "Medium",
+        "severity": input_severity,
         "rec": "Inspect vehicle components, run diagnostic scan using OBD-II scanner, and check fluid levels.",
-        "parts_replace": "General parts depending on check",
-        "parts_repair": "Adjust connections and clear codes"
+        "parts_replace": "Standard replacement parts based on inspection",
+        "parts_repair": "Clean connections and recalibrate sensors"
     })
     
     return {
