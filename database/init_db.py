@@ -224,7 +224,7 @@ def init_database():
         if count == 0:
             import random
             from datetime import timedelta
-            vehicle_types = ["Car", "SUV", "Truck", "Van"]
+            vehicle_types = ["Car", "SUV"]
             makes_models = ["Hyundai i20", "Maruti Swift", "Honda City", "Toyota Innova", "Ford EcoSport", "Tata Nexon"]
             service_types = ["Oil Change", "Brake Pad Replacement", "Transmission Repair", "Engine Diagnostics", "Tire Rotation", "AC Service"]
             parts = {
